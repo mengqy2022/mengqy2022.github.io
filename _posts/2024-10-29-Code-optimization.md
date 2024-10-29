@@ -178,10 +178,17 @@ venn_analysis$plot_venn_diagram()
 - The second change is to use R6 class.
 - The third change is that it is simpler to use.
 
+## Example One: Upset
+
+> Detailed content [Click][click-upset]
+
+
+
 > Email me with more questions!
 > 584338215@qq.com
 
 [click-veen]: https://mengqy2022.github.io/comparative%20genomics/Veen-plot/
+[click-upset]: https://mengqy2022.github.io/comparative%20genomics/Upset-plot/
 
 <script src="https://giscus.app/client.js"
         data-repo="mengqy2022/mengqy2022.github.io"
