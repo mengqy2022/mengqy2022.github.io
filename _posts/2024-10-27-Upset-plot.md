@@ -302,6 +302,9 @@ ggsave(filename = "test.pdf", p1, width = 60, height = 30, units = "cm")
 
 **[RStudio][rstudio-doc] is recommended for running this script.**
 
+> - There is a huge error and this can lead to a lot of data loss.
+> - Fixed bugs and updated code. [Click][code-update]
+
 <div class="notice">
   <h4>I wrote this script a long time ago, and there is a lot of redundant code, but this is the original processing logic.<br><br>It's better to understand.</h4>
 </div>
@@ -344,6 +347,7 @@ ggsave(filename = "test.pdf", p1, width = 60, height = 30, units = "cm")
 [complexupset-doc]: https://github.com/krassowski/complex-upset
 [kegg-ann]: https://mengqy2022.github.io/gene%20annotation/kegg-ann/
 [kegg-modules]: https://mengqy2022.github.io/gene%20annotation/kegg-modules/
+[code-update]: https://mengqy2022.github.io/code%20optimization/Code-optimization/
 
 <script src="https://giscus.app/client.js"
         data-repo="mengqy2022/mengqy2022.github.io"
