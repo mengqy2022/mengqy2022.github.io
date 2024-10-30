@@ -408,6 +408,10 @@ ggsave(filename = "test.pdf", p1, width = 35, height = 20, units = "cm")
   <img src="https://mengqy2022.github.io/assets/images/2024-10-29-Code-optimization-1.png"/>
 </div>
 
+<div class="notice">
+  <h4>In the case of unknown genes that were not assigned to species, it is because for the homozygous gene analysis I used 8 species, and in this analysis I removed one.</h4>
+</div>
+
 > Email me with more questions!
 > 584338215@qq.com
 
