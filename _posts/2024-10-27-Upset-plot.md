@@ -302,7 +302,7 @@ ggsave(filename = "test.pdf", p1, width = 60, height = 30, units = "cm")
 
 **[RStudio][rstudio-doc] is recommended for running this script.**
 
-> - There is a huge error and this can lead to a lot of data loss.
+> - There is a huge error and this can lead to a lot of annotation information loss.
 > - Fixed bugs and updated code. [Click][code-update]
 
 <div class="notice">
