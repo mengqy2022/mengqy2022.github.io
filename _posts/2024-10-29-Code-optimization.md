@@ -174,7 +174,7 @@ venn_analysis$plot_venn_diagram()
 
 **The output will be two pdf files: my_venn_diagram_p1.pdf and my_venn_diagram_p2.pdf.**
 
-## Example One: Upset
+## Example Two: Upset
 
 > Detailed content [Click][click-upset]
 
