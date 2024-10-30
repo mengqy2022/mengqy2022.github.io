@@ -404,7 +404,7 @@ ggsave(filename = "test.pdf", p1, width = 35, height = 20, units = "cm")
 
 ### result
 
-<div style="text-align: center; margin-bottom: 20px;">
+<div style="text-align: center;">
   <img src="https://mengqy2022.github.io/assets/images/2024-10-29-Code-optimization-1.png"/>
 </div>
 
