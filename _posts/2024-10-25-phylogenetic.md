@@ -1,5 +1,5 @@
 ---
-title: "Phylogenetic Analysis Of Single-copy Genes in bacteria!"
+title: "Phylogenetic Analysis Of Single-copy Genes In Bacteria!"
 categories: 
  - Genomics
 tags: 
