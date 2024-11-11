@@ -72,8 +72,7 @@ def fetch_and_process_kegg_module(output_file, output_file_flag=True):
     if not module:
         if output_file_flag:
             write_output(output_file, 'moduleID\tdescription\tpathway\tlevel0\tlevel1\tlevel2', [])
-        return []  # 返回空列表确保后续处理正常进行
-
+        return [] 
     module_info = ['moduleID\tdescription\tpathway\tlevel0\tlevel1\tlevel2']
     for level0 in module['children']:
         for level1 in level0['children']:
@@ -84,7 +83,6 @@ def fetch_and_process_kegg_module(output_file, output_file_flag=True):
                     moduleID = ml[0]
                     module_name, relatePath = extract_module_name_and_path(module_info_entry, ml)
 
-                    # 使用字符串格式化的方法构建行
                     line = '%s\t%s\t%s\t%s\t%s\t%s\n' % (
                         moduleID,
                         module_name,
@@ -97,42 +95,44 @@ def fetch_and_process_kegg_module(output_file, output_file_flag=True):
 
     # 将构建好的行写入文件
     if output_file_flag:
-        write_output(output_file, module_info[0], module_info[1:])  # 这里 module_info[1:] 仍然是以行字符串的形式存在
-    return module_info  # 返回模块信息列表
+        write_output(output_file, module_info[0], module_info[1:]) 
+    return module_info 
 
 
 def fetch_and_process_kegg_pathway(output_file, output_file_flag=True):
     url = "https://www.kegg.jp/kegg-bin/download_htext?htext=br08901&format=json&filedir="
     pathway = fetch_json(url)
-    
-    pathway_info = []  # 初始化 pathway_info 变量
+
+    if not pathway:
+        if output_file_flag:
+            write_output(output_file, 'mapID\tdescription\tlevel1\tlevel2', [])
+        return []  
+
+    pathway_info = ['mapID\tdescription\tlevel1\tlevel2']
 
     if pathway:
-        lines = ['mapID\tdescription\tlevel1\tlevel2']
         for level0 in pathway.get('children', []):
             for level1 in level0.get('children', []):
                 for level2 in level1.get('children', []):
                     level2_name = level2.get('name', '').strip()
                     ll = level2_name.split('  ')
                     if len(ll) >= 2:
-                        # 使用字符串格式化构建行
+
                         line = 'map%s\t%s\t%s\t%s\n' % (
                             ll[0],
                             ll[1],
                             level0.get("name", "NA"),
                             level1.get("name", "NA")
                         )
-                        lines.append(line)
-                        pathway_info.append(line)  # 将行信息添加到 pathway_info 列表中
+                        pathway_info.append(line) 
                     else:
                         print(f"警告：未能正确解析level2名称：{level2_name}")
 
     # 将构建好的行写入文件
     if output_file_flag:
-        write_output(output_file, lines[0], lines[1:])  # 第一行是标题，后面是数据行
+        write_output(output_file, pathway_info[0], pathway_info[1:])  
 
-    return pathway_info  # 如果需要，可以返回 pathway_inf
-
+    return pathway_info 
 
 def fetch_and_process_kegg_compounds(output_file):
     url = "https://www.genome.jp/kegg-bin/download_htext?htext=br08001&format=json&filedir="
@@ -146,7 +146,7 @@ def fetch_and_process_kegg_compounds(output_file):
                     for level3 in level2.get('children', []):
                         cl = level3.get('name', '').strip().split('  ')
                         if len(cl) >= 2:
-                            # 使用字符串格式化的方法构建行
+
                             line = '%s\t%s\t%s\t%s\t%s\n' % (
                                 cl[0],
                                 cl[1],
@@ -158,20 +158,19 @@ def fetch_and_process_kegg_compounds(output_file):
                         else:
                             print(f"警告：未能正确解析level3名称：{level3.get('name', '')}")
 
-        # 将构建好的行写入输出文件
-        write_output(output_file, lines[0], lines[1:])  # 第一行是标题，后面是数据行
+        write_output(output_file, lines[0], lines[1:]) 
 
 def fetch_data_from_kegg(url, pathway_id):
-    max_retries = 3  # 最大重试次数
-    retry_count = 0  # 当前重试计数
+    max_retries = 3 
+    retry_count = 0 
     while retry_count < max_retries:
         try:
             response = requests.get(url)
-            response.raise_for_status()  # 检查请求是否成功
+            response.raise_for_status() 
             
             values = []
             for content_line in response.text.splitlines():
-                if content_line.strip():  # 忽略空行
+                if content_line.strip(): 
                     al = content_line.split('\t')
                     if len(al) > 1:
                         value = al[1].strip().split(':')[-1] if al[1].strip().startswith("ko:") or al[1].strip().startswith("cpd:") else al[1].strip()
@@ -182,7 +181,7 @@ def fetch_data_from_kegg(url, pathway_id):
             print(f"获取数据失败，模块ID: {pathway_id}, 错误信息：{e}，正在尝试重新连接，当前尝试次数：{retry_count}/{max_retries}")
             if retry_count >= max_retries:
                 return []
-    return []  # 如果超过最大重试次数仍未成功，返回空列表。
+    return [] 
 
 def process_kegg_links(module_info, output_file, data_type):
     if not module_info or len(module_info) < 2:
@@ -192,30 +191,25 @@ def process_kegg_links(module_info, output_file, data_type):
     module_ko = {}
     module_comp = {}
     
-    # 不包括表头
     total_modules = len(module_info) - 1  
     processed_modules = 0
 
-    for line in module_info[1:]:  # 跳过表头
-        fields = line.split('\t')  # 按制表符分割行
+    for line in module_info[1:]: 
+        fields = line.split('\t') 
         module_id = fields[0]
 
-        # 处理 KO 数据
         ko_url = f"http://rest.kegg.jp/link/ko/{module_id}"
         module_ko[module_id] = fetch_data_from_kegg(ko_url, module_id)
-        time.sleep(1)  # 等待一秒
+        time.sleep(1) 
 
-        # 处理化合物数据
         comp_url = f"http://rest.kegg.jp/link/compound/{module_id}"
         module_comp[module_id] = fetch_data_from_kegg(comp_url, module_id)
-        time.sleep(1)  # 等待一秒
+        time.sleep(1)  
 
-        # 更新并显示进度
         processed_modules += 1
         progress = (processed_modules / total_modules) * 100
         print(f"{data_type}处理进度: {progress:.2f}% ({processed_modules}/{total_modules})")
 
-    # 写入输出文件
     with open(output_file, 'w') as outFile:
         if data_type == "模块":
             header = module_info[0].strip() + '\tkoList\tcompoundsList\n'
@@ -262,7 +256,6 @@ if __name__ == "__main__":
         print_colored("请至少选择一个数据类型：--modules, --pathways, --compounds, --module-links, --pathway-links", 'red')
         sys.exit(1)
 
-    # 检查是否选择了多个参数
     selected_count = sum([args.modules, args.pathways, args.compounds, args.module_links, args.pathway_links])
     if selected_count > 1:
         print_colored("错误：只能选择一个数据类型，您选择了多个！\n", 'red')
@@ -270,25 +263,22 @@ if __name__ == "__main__":
 
     try:
         if args.modules:
-            # 获取模块信息并写入文件
             module_info = fetch_and_process_kegg_module(args.output)
 
         if args.module_links:
-            # 不写输出文件
             module_info = fetch_and_process_kegg_module(args.output, output_file_flag=False)
             
-            # 检查 module_info 的有效性
-            if not module_info or len(module_info) < 2:  # 确保至少有表头和一行数据
+            if not module_info or len(module_info) < 2: 
                 print("警告：获取的模块信息为空或数据不完整，无法处理模块链接。")
             else:
-                process_kegg_links_module(module_info, args.output)  # 处理模块链接
+                process_kegg_links_module(module_info, args.output) 
 
         if args.pathways:
             pathway_info = fetch_and_process_kegg_pathway(args.output)
 
         if args.pathway_links:
             pathway_info = fetch_and_process_kegg_pathway(args.output, output_file_flag=False)
-            process_kegg_links_pathway(pathway_info, args.output)  # 处理路径链接
+            process_kegg_links_pathway(pathway_info, args.output) 
 
         if args.compounds:
             fetch_and_process_kegg_compounds(args.output)
