@@ -21,6 +21,7 @@ Since the kegg database is updated quickly, we need to keep its information up t
 # @Time      : 2024/11/09
 
 import requests
+import time
 import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
@@ -160,11 +161,34 @@ def fetch_and_process_kegg_compounds(output_file):
         # 将构建好的行写入输出文件
         write_output(output_file, lines[0], lines[1:])  # 第一行是标题，后面是数据行
 
-def process_kegg_links_module(module_info, output_file):
+def fetch_data_from_kegg(url, pathway_id):
+    max_retries = 3  # 最大重试次数
+    retry_count = 0  # 当前重试计数
+    while retry_count < max_retries:
+        try:
+            response = requests.get(url)
+            response.raise_for_status()  # 检查请求是否成功
+            
+            values = []
+            for content_line in response.text.splitlines():
+                if content_line.strip():  # 忽略空行
+                    al = content_line.split('\t')
+                    if len(al) > 1:
+                        value = al[1].strip().split(':')[-1] if al[1].strip().startswith("ko:") or al[1].strip().startswith("cpd:") else al[1].strip()
+                        values.append(value)
+            return values
+        except requests.RequestException as e:
+            retry_count += 1
+            print(f"获取数据失败，模块ID: {pathway_id}, 错误信息：{e}，正在尝试重新连接，当前尝试次数：{retry_count}/{max_retries}")
+            if retry_count >= max_retries:
+                return []
+    return []  # 如果超过最大重试次数仍未成功，返回空列表。
+
+def process_kegg_links(module_info, output_file, data_type):
     if not module_info or len(module_info) < 2:
         print("警告：输入的模块信息为空，无法处理。")
         return
-
+    
     module_ko = {}
     module_comp = {}
     
@@ -172,58 +196,33 @@ def process_kegg_links_module(module_info, output_file):
     total_modules = len(module_info) - 1  
     processed_modules = 0
 
-    # 合并处理 KO 和化合物的逻辑
     for line in module_info[1:]:  # 跳过表头
         fields = line.split('\t')  # 按制表符分割行
         module_id = fields[0]
 
         # 处理 KO 数据
-        try:
-            ko_url = f"http://rest.kegg.jp/link/ko/{module_id}"
-            ko_response = requests.get(ko_url)
-            ko_response.raise_for_status()  # 检查请求是否成功
-            
-            ko_values = []
-            for content_line in ko_response.text.splitlines():
-                if content_line.strip():  # 忽略空行
-                    al = content_line.split('\t')
-                    if len(al) > 1:
-                        ko_value = al[1].strip().split(':')[-1] if al[1].strip().startswith("ko:") else al[1].strip()
-                        ko_values.append(ko_value)
-
-            module_ko[module_id] = ko_values  # 保存当前 module_id 对应的 ko 值列表
-        except requests.RequestException as e:
-            print(f"获取 KO 数据失败，模块ID: {module_id}, 错误信息：{e}")
-            module_ko[module_id] = []  # 即使失败，也记录模块ID
+        ko_url = f"http://rest.kegg.jp/link/ko/{module_id}"
+        module_ko[module_id] = fetch_data_from_kegg(ko_url, module_id)
+        time.sleep(1)  # 等待一秒
 
         # 处理化合物数据
-        try:
-            comp_url = f"http://rest.kegg.jp/link/compound/{module_id}"
-            comp_response = requests.get(comp_url)
-            comp_response.raise_for_status()  # 检查请求是否成功
-            
-            comp_values = []
-            for content_line in comp_response.text.splitlines():
-                if content_line.strip():  # 忽略空行
-                    al = content_line.split('\t')
-                    if len(al) > 1:
-                        comp_value = al[1].strip().split(':')[-1] if al[1].strip().startswith("cpd:") else al[1].strip()
-                        comp_values.append(comp_value)
-
-            module_comp[module_id] = comp_values  # 保存当前 module_id 对应的化合物值列表
-        except requests.RequestException as e:
-            print(f"获取化合物数据失败，模块ID: {module_id}, 错误信息：{e}")
-            module_comp[module_id] = []  # 即使失败，也记录模块ID
+        comp_url = f"http://rest.kegg.jp/link/compound/{module_id}"
+        module_comp[module_id] = fetch_data_from_kegg(comp_url, module_id)
+        time.sleep(1)  # 等待一秒
 
         # 更新并显示进度
         processed_modules += 1
         progress = (processed_modules / total_modules) * 100
-        print(f"模块处理进度: {progress:.2f}% ({processed_modules}/{total_modules})")
+        print(f"{data_type}处理进度: {progress:.2f}% ({processed_modules}/{total_modules})")
 
     # 写入输出文件
     with open(output_file, 'w') as outFile:
-        header = module_info[0].strip() + '\tkoList\tcompoundsList\n'
+        if data_type == "模块":
+            header = module_info[0].strip() + '\tkoList\tcompoundsList\n'
+        else:
+            header = 'mapID\tdescription\tlevel1\tlevel2\tkoList\tcompoundsList\n'
         outFile.write(header)
+
         for line in module_info[1:]:
             if line.strip():
                 bl = line.strip().split('\t')
@@ -231,77 +230,11 @@ def process_kegg_links_module(module_info, output_file):
                 complist = module_comp.get(bl[0], [])
                 outFile.write('\t'.join(bl) + '\t' + ','.join(kolist) + '\t' + ','.join(complist) + '\n')
 
+def process_kegg_links_module(module_info, output_file):
+    process_kegg_links(module_info, output_file, data_type="模块")
+
 def process_kegg_links_pathway(pathway_info, output_file):
-    if not pathway_info or len(pathway_info) < 2:
-        print("警告：输入的模块信息为空，无法处理。")
-        return
-
-    pathway_ko = {}
-    pathway_comp = {}
-    
-    # 不包括表头
-    total_pathways = len(pathway_info) - 1  
-    processed_pathways = 0
-
-    # 合并处理 KO 和化合物的逻辑
-    for line in pathway_info[1:]:  # 跳过表头
-        fields = line.split('\t')  # 按制表符分割行
-        pathway_id = fields[0]
-
-        # 处理 KO 数据
-        try:
-            ko_url = f"http://rest.kegg.jp/link/ko/{pathway_id}"
-            ko_response = requests.get(ko_url)
-            ko_response.raise_for_status()  # 检查请求是否成功
-            
-            ko_values = []
-            for content_line in ko_response.text.splitlines():
-                if content_line.strip():  # 忽略空行
-                    al = content_line.split('\t')
-                    if len(al) > 1:
-                        ko_value = al[1].strip().split(':')[-1] if al[1].strip().startswith("ko:") else al[1].strip()
-                        ko_values.append(ko_value)
-
-            pathway_ko[pathway_id] = ko_values  
-        except requests.RequestException as e:
-            print(f"获取 KO 数据失败，模块ID: {pathway_id}, 错误信息：{e}")
-            pathway_ko[pathway_id] = []  # 即使失败，也记录模块ID
-
-        # 处理化合物数据
-        try:
-            comp_url = f"http://rest.kegg.jp/link/compound/{pathway_id}"
-            comp_response = requests.get(comp_url)
-            comp_response.raise_for_status()  # 检查请求是否成功
-            
-            comp_values = []
-            for content_line in comp_response.text.splitlines():
-                if content_line.strip():  # 忽略空行
-                    al = content_line.split('\t')
-                    if len(al) > 1:
-                        comp_value = al[1].strip().split(':')[-1] if al[1].strip().startswith("cpd:") else al[1].strip()
-                        comp_values.append(comp_value)
-
-            pathway_comp[pathway_id] = comp_values 
-        except requests.RequestException as e:
-            print(f"获取化合物数据失败，模块ID: {pathway_id}, 错误信息：{e}")
-            pathway_comp[pathway_id] = []  # 即使失败，也记录模块ID
-
-        # 更新并显示进度
-        processed_pathways += 1
-        progress = (processed_pathways / total_pathways) * 100
-        print(f"模块处理进度: {progress:.2f}% ({processed_pathways}/{total_pathways})")
-
-    # 写入输出文件
-    with open(output_file, 'w') as outFile:
-        # 固定标题，不使用 pathway_info[0]
-        header = 'mapID\tdescription\tlevel1\tlevel2\tkoList\tcompoundsList\n'
-        outFile.write(header)
-        for line in pathway_info[1:]:
-            if line.strip():
-                bl = line.strip().split('\t')
-                kolist = pathway_ko.get(bl[0], [])
-                complist = pathway_comp.get(bl[0], [])
-                outFile.write('\t'.join(bl) + '\t' + ','.join(kolist) + '\t' + ','.join(complist) + '\n')
+    process_kegg_links(pathway_info, output_file, data_type="通路")
 
 if __name__ == "__main__":
 
