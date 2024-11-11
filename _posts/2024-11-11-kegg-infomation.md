@@ -340,7 +340,7 @@ python ./kegg_info_inte_one_upgrade.py --pathway-links -o test_pathway_link.txt
 {% endhighlight %}
 
 <div style="text-align: center;">
-  <img src="https://mengqy2022.github.io/assets/images/2024-11-11-kegg-infomation-3.png"/>
+  <img src="https://mengqy2022.github.io/assets/images/2024-11-11-kegg-infomation-7.png"/>
 </div>
 
 {% highlight bash %}
