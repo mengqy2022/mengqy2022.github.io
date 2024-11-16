@@ -1,7 +1,7 @@
 ---
 title: "Eggnog-mapper Gene Function Annotation！"
 categories: 
- - Genomics
+ - Gene annotation
 tags: 
  - KEGG
  - COG
