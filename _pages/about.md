@@ -23,7 +23,7 @@ I'll fill in as much content as I like pretty much at random.
 New member "Millions"
 
 <div style="text-align: center;">
-  <img src="https://mengqy2022.github.io/assets/images/README-1.png"/>
+  <img src="https://mengqy2022.github.io/assets/images/README-1.jpg" alt="Millions"/>
 </div>
 
 
