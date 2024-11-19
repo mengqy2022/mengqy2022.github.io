@@ -18,6 +18,15 @@ I'll fill in as much content as I like pretty much at random.
 > - fitness
 > - Keep up the good work.
 
+## 2024/11/17
+
+New member "Millions"
+
+<div style="text-align: center;">
+  <img src="https://mengqy2022.github.io/assets/images/README-1.png"/>
+</div>
+
+
 <script src="https://giscus.app/client.js"
         data-repo="mengqy2022/mengqy2022.github.io"
         data-repo-id="R_kgDONFQ-nw"
