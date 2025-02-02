@@ -163,18 +163,13 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 {% endhighlight %}
 
 > Paste copy the above script into a file and it will work, for example:
 
 {% highlight bash %}
-python ./kegg_info_inte_one_upgrade.py
+NCBI_database_down.py
 {% endhighlight %}
-
-<div style="text-align: center;">
-  <img src="https://mengqy2022.github.io/assets/images/2024-11-11-kegg-infomation-1.png"/>
-</div>
 
 ## The type of information that can be accessed.
 
@@ -182,65 +177,31 @@ python ./kegg_info_inte_one_upgrade.py
 python ./kegg_info_inte_one_upgrade.py -h
 {% endhighlight %}
 
-<div style="text-align: center; margin-bottom: 20px;">
-  <img src="https://mengqy2022.github.io/assets/images/2024-11-11-kegg-infomation-2.png"/>
+<div style="text-align: center;">
+  <img src="https://mengqy2022.github.io/assets/images/2025-02-02-Genbank-download-1.png"/>
 </div>
 
-- Modules: Get information about the KEGG module classification.
-- Pathways: Get the information of KEGG pathways classification.
-- Compounds: Get the information of KEGG compounds classification.
-- Module Links: Get the links between KEGG modules and compounds and KOs.
-- Pathway Links: Get the links between KEGG pathways and compounds and KOs.
+- blast_db: Get information about nucleic acid and protein databases of blast.
+- fasta: Get information about nucleic acid and protein databases of sequences.
+- output_dir: Customize the output directory.
 
 ## Results
 
-{% highlight bash %}
-python ./kegg_info_inte_one_upgrade.py --module-links -o test_moudle_link.txt
-{% endhighlight %}
-
-<div style="text-align: center;">
-  <img src="https://mengqy2022.github.io/assets/images/2024-11-11-kegg-infomation-3.png"/>
-</div>
+#### Download nucleic acid databases of blast.
 
 {% highlight bash %}
-python ./kegg_info_inte_one_upgrade.py --pathway-links -o test_pathway_link.txt
+python ./kegg_info_inte_one_upgrade.py --blast_db nt -o nt_blast_db
 {% endhighlight %}
 
-<div style="text-align: center;">
-  <img src="https://mengqy2022.github.io/assets/images/2024-11-11-kegg-infomation-7.png"/>
-</div>
-
+#### Download protein databases of sequences.
 {% highlight bash %}
-python ./kegg_info_inte_one_upgrade.py --modules -o modules.txt
+python ./kegg_info_inte_one_upgrade.py --fasta nt_fasta -o nt_db
 {% endhighlight %}
-
-<div style="text-align: center;">
-  <img src="https://mengqy2022.github.io/assets/images/2024-11-11-kegg-infomation-4.png"/>
-</div>
-
-> This information can be used for further analysis and visualization. [barplot][barplot] [heatmap][heatmap]
-
-{% highlight bash %}
-python ./kegg_info_inte_one_upgrade.py --pathways -o pathways.txt
-{% endhighlight %}
-
-<div style="text-align: center;">
-  <img src="https://mengqy2022.github.io/assets/images/2024-11-11-kegg-infomation-5.png"/>
-</div>
-
-{% highlight bash %}
-python ./kegg_info_inte_one_upgrade.py --compounds -o compounds.txt
-{% endhighlight %}
-
-<div style="text-align: center;">
-  <img src="https://mengqy2022.github.io/assets/images/2024-11-11-kegg-infomation-6.png"/>
-</div>
 
 > Email me with more questions!
 > 584338215@qq.com
 
-[barplot]: https://mengqy2022.github.io/comparative%20genomics/barplot/
-[heatmap]: https://mengqy2022.github.io/comparative%20genomics/Comparative-genomics/
+[GenBank]: https://ftp.ncbi.nlm.nih.gov/blast/db/
 
 <script src="https://giscus.app/client.js"
         data-repo="mengqy2022/mengqy2022.github.io"
