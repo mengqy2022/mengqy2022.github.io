@@ -9,283 +9,160 @@ tags:
 
 # Introduction
 
-Since the kegg database is updated quickly, we need to keep its information up to date.
+Download using the wget utility, which supports broken connections and multiple connection attempts, the key to success is the speed and stability of the network.
 
-## Just do it.
+This script supports downloadable sequence formats and Blast-specific formats for a total of three databases: nucleic acid, protein and swissprot.
+
+## Code example
 
 {% highlight python %}
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # @Author    : mengqingyao
 # @Email     : 15877464851@163.com
-# @Time      : 2024/11/09
+# @Time      : 2024/11/20
 
 import requests
-import time
-import datetime
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import json
-import sys
-import re
+import subprocess
+import os
+import glob
 import argparse
+import sys
+from tqdm import tqdm
+import time
+from datetime import datetime
 
-current_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+# 定义两个不同的数据库URL
+NR_METADATA_URL = "https://ftp.ncbi.nlm.nih.gov/blast/db/nr-prot-metadata.json"
+NT_METADATA_URL = "https://ftp.ncbi.nlm.nih.gov/blast/db/nt-nucl-metadata.json"
 
+ADDITIONAL_URLS = {
+    "nr_fasta": "https://ftp.ncbi.nlm.nih.gov/blast/db/FASTA/nr.gz",
+    "nt_fasta": "https://ftp.ncbi.nlm.nih.gov/blast/db/FASTA/nt.gz",
+    "swissprot": "https://ftp.ncbi.nlm.nih.gov/blast/db/FASTA/swissprot.gz",
+}
 
-def print_colored(text, color):
-    color_codes = {
-        'purple': '\033[95m',
-        'green': '\033[92m',
-        'red': '\033[91m',
-        'reset': '\033[0m'
-    }
-    print(f"{color_codes.get(color, '')}{text}{color_codes['reset']}")
+DATABASE_URLS = {
+    "nr": NR_METADATA_URL,
+    "nt": NT_METADATA_URL,
+}
 
-def fetch_json(url):
+def execute_command(command, check=True):
+    """执行命令并处理异常"""
     try:
-        response = requests.get(url)
-        response.raise_for_status()
-        return response.json()
-    except requests.RequestException as e:
-        print(f"请求失败，错误信息：{e}")
-    except json.JSONDecodeError:
-        print("JSON解析失败")
-    return None
+        process = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, check=check)
+        return process.stdout
+    except subprocess.CalledProcessError as e:
+        print(f"命令执行失败: {e}")
+        return None
 
-def write_output(file_path, header, lines):
-    try:
-        with open(file_path, 'w') as outFile:
-            outFile.write(header + '\n')
-            outFile.writelines(lines)
-    except IOError as e:
-        print(f"写入文件失败，错误信息：{e}")
+def download_database(metadata_url, output_dir):
+    response = requests.get(metadata_url)
+    if response.status_code != 200:
+        print(f"请求失败，状态码：{response.status_code}")
+        return False
 
-def extract_module_name_and_path(module_info, ml):
-    module_name = ml[1].split('[')[0] if re.search(r'\[PATH:', module_info) else ml[1]
-    relatePath = re.findall(r'\[PATH:.*?]', module_info)[0].split(":")[1].strip(']') if module_name != ml[1] else 'NA'
-    return module_name, relatePath
+    data = response.json()
+    files = data.get("files", [])
+    os.makedirs(output_dir, exist_ok=True)
+    
+    file_links_path = os.path.join(output_dir, "file_links.txt")
+    with open(file_links_path, "w") as f:
+        f.write("\n".join(files) + "\n")
+    print(f"{metadata_url} 的文件链接已成功写入 {file_links_path}。")
 
-def fetch_and_process_kegg_module(output_file, output_file_flag=True):
-    url = "https://www.kegg.jp/kegg-bin/download_htext?htext=ko00002&format=json&filedir="
-    module = fetch_json(url)
-
-    if not module:
-        if output_file_flag:
-            write_output(output_file, 'moduleID\tdescription\tpathway\tlevel0\tlevel1\tlevel2', [])
-        return [] 
-    module_info = ['moduleID\tdescription\tpathway\tlevel0\tlevel1\tlevel2']
-    for level0 in module['children']:
-        for level1 in level0['children']:
-            for level2 in level1['children']:
-                for level3 in level2['children']:
-                    module_info_entry = level3['name'].strip()
-                    ml = module_info_entry.split('  ')
-                    moduleID = ml[0]
-                    module_name, relatePath = extract_module_name_and_path(module_info_entry, ml)
-
-                    line = '%s\t%s\t%s\t%s\t%s\t%s\n' % (
-                        moduleID,
-                        module_name,
-                        relatePath,
-                        level0["name"],
-                        level1["name"],
-                        level2["name"]
-                    )
-                    module_info.append(line)
-
-    # 将构建好的行写入文件
-    if output_file_flag:
-        write_output(output_file, module_info[0], module_info[1:]) 
-    return module_info 
+    file_links_path = os.path.join(output_dir, "file_links.txt")
+    # 将文件链接的前缀替换为 https
+    files_with_https = [file.replace("ftp://", "https://") for file in files]
+    with open(file_links_path, "w") as f:
+        f.write("\n".join(files_with_https) + "\n")
+    print(f"{metadata_url} 的文件链接已成功写入 {file_links_path}。")
 
 
-def fetch_and_process_kegg_pathway(output_file, output_file_flag=True):
-    url = "https://www.kegg.jp/kegg-bin/download_htext?htext=br08901&format=json&filedir="
-    pathway = fetch_json(url)
 
-    if not pathway:
-        if output_file_flag:
-            write_output(output_file, 'mapID\tdescription\tlevel1\tlevel2', [])
-        return []  
+    print(f"开始下载 {metadata_url} 的文件...")
+    # 假设 args.output_dir 是你传入的输出目录
+    output = execute_command(["wget", "-c", "--retry-connrefused", "--tries", "0", "-t", "0", "-P", output_dir, "-i", file_links_path])
 
-    pathway_info = ['mapID\tdescription\tlevel1\tlevel2']
-
-    if pathway:
-        for level0 in pathway.get('children', []):
-            for level1 in level0.get('children', []):
-                for level2 in level1.get('children', []):
-                    level2_name = level2.get('name', '').strip()
-                    ll = level2_name.split('  ')
-                    if len(ll) >= 2:
-
-                        line = 'map%s\t%s\t%s\t%s\n' % (
-                            ll[0],
-                            ll[1],
-                            level0.get("name", "NA"),
-                            level1.get("name", "NA")
-                        )
-                        pathway_info.append(line) 
-                    else:
-                        print(f"警告：未能正确解析level2名称：{level2_name}")
-
-    # 将构建好的行写入文件
-    if output_file_flag:
-        write_output(output_file, pathway_info[0], pathway_info[1:])  
-
-    return pathway_info 
-
-def fetch_and_process_kegg_compounds(output_file):
-    url = "https://www.genome.jp/kegg-bin/download_htext?htext=br08001&format=json&filedir="
-    compounds = fetch_json(url)
-
-    lines = ['CompoundID\tdescription\tlevel1\tlevel2\tlevel3']
-    if compounds:
-        for level0 in compounds.get('children', []):
-            for level1 in level0.get('children', []):
-                for level2 in level1.get('children', []):
-                    for level3 in level2.get('children', []):
-                        cl = level3.get('name', '').strip().split('  ')
-                        if len(cl) >= 2:
-
-                            line = '%s\t%s\t%s\t%s\t%s\n' % (
-                                cl[0],
-                                cl[1],
-                                level0.get("name", "NA"),
-                                level1.get("name", "NA"),
-                                level2.get("name", "NA")
-                            )
-                            lines.append(line)
-                        else:
-                            print(f"警告：未能正确解析level3名称：{level3.get('name', '')}")
-
-        write_output(output_file, lines[0], lines[1:]) 
-
-def fetch_data_from_kegg(url, pathway_id):
-    max_retries = 3 
-    retry_count = 0 
-    while retry_count < max_retries:
-        try:
-            response = requests.get(url)
-            response.raise_for_status() 
+    
+    if output is not None:
+        print("下载输出：")
+        print(output)  # 输出下载日志
+        
+        total_files = len(files)
+        downloaded_files = output.count("100%")
+        
+        if downloaded_files == total_files:
+            print("所有文件下载完成。")
+            return True
+        else:
+            print(f"下载完成的文件数量与预期不符：{downloaded_files}/{total_files}。")
+            return False
             
-            values = []
-            for content_line in response.text.splitlines():
-                if content_line.strip(): 
-                    al = content_line.split('\t')
-                    if len(al) > 1:
-                        value = al[1].strip().split(':')[-1] if al[1].strip().startswith("ko:") or al[1].strip().startswith("cpd:") else al[1].strip()
-                        values.append(value)
-            return values
-        except requests.RequestException as e:
-            retry_count += 1
-            print(f"获取数据失败，模块ID: {pathway_id}, 错误信息：{e}，正在尝试重新连接，当前尝试次数：{retry_count}/{max_retries}")
-            if retry_count >= max_retries:
-                return []
-    return [] 
+    return False
 
-def process_kegg_links(module_info, output_file, data_type):
-    if not module_info or len(module_info) < 2:
-        print("警告：输入的模块信息为空，无法处理。")
+def download_additional_file(file_url, output_dir):
+    os.makedirs(output_dir, exist_ok=True)
+
+    print(f"开始下载 {file_url}...")
+    output = execute_command(["wget", "-c", "--retry-connrefused", "--tries", "0", file_url,"-P", output_dir])
+    
+    if output and "100%" in output:
+        print(f"{file_url} 下载完成。")
+        return True
+    else:
+        print(f"{file_url} 下载过程中出现错误。")
+        print("下载输出：")
+        print(output)
+        return False
+
+def extract_files(output_dir):
+    downloaded_files = glob.glob(os.path.join(output_dir, "*.tar.gz"))
+    
+    if not downloaded_files:
+        print("没有找到需要解压的文件。")
         return
     
-    module_ko = {}
-    module_comp = {}
-    
-    total_modules = len(module_info) - 1  
-    processed_modules = 0
+    print("开始解压下载的文件...")
+    for tar_file in downloaded_files:
+        execute_command(["tar", "-xzvf", tar_file])
+        print(f"{tar_file} 解压完成。")
+        os.remove(tar_file)
+        print(f"已删除文件: {tar_file}")
 
-    for line in module_info[1:]: 
-        fields = line.split('\t') 
-        module_id = fields[0]
+def main():
+    current_time = datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")
+    print(f"\n\t\t\t{current_time}\n")
 
-        ko_url = f"http://rest.kegg.jp/link/ko/{module_id}"
-        module_ko[module_id] = fetch_data_from_kegg(ko_url, module_id)
-        time.sleep(1) 
-
-        comp_url = f"http://rest.kegg.jp/link/compound/{module_id}"
-        module_comp[module_id] = fetch_data_from_kegg(comp_url, module_id)
-        time.sleep(1)  
-
-        processed_modules += 1
-        progress = (processed_modules / total_modules) * 100
-        print(f"{data_type}处理进度: {progress:.2f}% ({processed_modules}/{total_modules})")
-
-    with open(output_file, 'w') as outFile:
-        if data_type == "模块":
-            header = module_info[0].strip() + '\tkoList\tcompoundsList\n'
-        else:
-            header = 'mapID\tdescription\tlevel1\tlevel2\tkoList\tcompoundsList\n'
-        outFile.write(header)
-
-        for line in module_info[1:]:
-            if line.strip():
-                bl = line.strip().split('\t')
-                kolist = module_ko.get(bl[0], [])
-                complist = module_comp.get(bl[0], [])
-                outFile.write('\t'.join(bl) + '\t' + ','.join(kolist) + '\t' + ','.join(complist) + '\n')
-
-def process_kegg_links_module(module_info, output_file):
-    process_kegg_links(module_info, output_file, data_type="模块")
-
-def process_kegg_links_pathway(pathway_info, output_file):
-    process_kegg_links(pathway_info, output_file, data_type="通路")
-
-if __name__ == "__main__":
-
-    print_colored("\n                由于kegg数据库更新的速度较快，因此我们需要不断更新其信息。\n", 'purple')
-
-    print_colored("                     此脚本用于获取并输出KEGG模块、通路和化合物信息。\n", 'purple')
-    print_colored("                             >>> 注意：五种参数独立使用！ <<<", 'red')
-    print_colored("                           >>> 注意：五种参数必须选择一种！ <<<\n", 'red')
-    print_colored("                                    [link 模式]\n", 'purple')
-    print_colored("     >>> 注意：由于KEGG网站的访问频率限制，link模式下运行速度可能受到一定影响。 <<<\n", 'red')
-    print_colored(f"                           当前日期: {current_date}", 'green')
-
-    parser = argparse.ArgumentParser(description=print_colored('\t\t                  [感谢使用本脚本]\n','green'),
-                                     epilog=print_colored('\t更详细的信息请访问: https://mengqy2022.github.io/gene%20annotation/kegg-infomation/\n','green'))
-    parser.add_argument('-o', '--output', required=True, help='指定输出文件的名称')
-    parser.add_argument('--modules', action='store_true', help='获取模块信息')
-    parser.add_argument('--pathways', action='store_true', help='获取通路信息')
-    parser.add_argument('--compounds', action='store_true', help='获取化合物信息')
-    parser.add_argument('--module-links', action='store_true', help='获取模块与化合物、KO的链接信息')
-    parser.add_argument('--pathway-links', action='store_true', help='获取路径与化合物、KO的链接信息')
+    parser = argparse.ArgumentParser(description="Download and extract NCBI BLAST databases.",
+                                     epilog="更新数据库信息，如果需要构建diamond数据库，请下载fasta序列文件。")
+    parser.add_argument("--blast_db", choices=DATABASE_URLS.keys(), help="选择要下载的数据库，支持：'nr' 或 'nt'。")
+    parser.add_argument("--fasta", choices=ADDITIONAL_URLS.keys(), help="选择要下载的额外文件，支持：'nr_fasta', 'nt_fasta', 'swissprot'。")
+    parser.add_argument("--output_dir", type=str, required=True, help="输出数据库文件的目录.")
 
     args = parser.parse_args()
 
-    if not (args.modules or args.pathways or args.compounds or args.module_links or args.pathway_links):
-        print_colored("请至少选择一个数据类型：--modules, --pathways, --compounds, --module-links, --pathway-links", 'red')
-        sys.exit(1)
+    start_time = time.time()  # 记录开始时间
 
-    selected_count = sum([args.modules, args.pathways, args.compounds, args.module_links, args.pathway_links])
-    if selected_count > 1:
-        print_colored("错误：只能选择一个数据类型，您选择了多个！\n", 'red')
-        sys.exit(1)
+    if args.blast_db:
+        print(f"开始下载数据库: {args.blast_db}")
+        download_success = download_database(DATABASE_URLS[args.blast_db], args.output_dir)
+        if download_success:
+            extract_files(args.output_dir)
 
-    try:
-        if args.modules:
-            module_info = fetch_and_process_kegg_module(args.output)
+    if args.fasta:
+        print(f"开始下载额外的文件: {args.fasta}")
+        download_success = download_additional_file(ADDITIONAL_URLS[args.fasta], args.output_dir)
+        if download_success:
+            extract_files(args.output_dir) 
 
-        if args.module_links:
-            module_info = fetch_and_process_kegg_module(args.output, output_file_flag=False)
-            
-            if not module_info or len(module_info) < 2: 
-                print("警告：获取的模块信息为空或数据不完整，无法处理模块链接。")
-            else:
-                process_kegg_links_module(module_info, args.output) 
+    elapsed_time = time.time() - start_time  # 计算总共的运行时间
+    hours, remainder = divmod(elapsed_time, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    print(f"总运行时间: {int(hours)}h {int(minutes)}m {int(seconds)}s")  # 输出运行时间
 
-        if args.pathways:
-            pathway_info = fetch_and_process_kegg_pathway(args.output)
-
-        if args.pathway_links:
-            pathway_info = fetch_and_process_kegg_pathway(args.output, output_file_flag=False)
-            process_kegg_links_pathway(pathway_info, args.output) 
-
-        if args.compounds:
-            fetch_and_process_kegg_compounds(args.output)
-
-    except Exception as e:
-        print(f"处理过程中发生错误：{e}")
-        sys.exit(1)
+if __name__ == "__main__":
+    main()
 
 {% endhighlight %}
 
