@@ -3,7 +3,6 @@ title: "GenBank database download tool！"
 categories: 
  - Database
 tags: 
- - KEGG
  - python
 ---
 
