@@ -1,7 +1,6 @@
 ---
-title: "KEGG annotation information collection and update！"
+title: "GenBank database download tool！"
 categories: 
- - Gene annotation
  - Database
 tags: 
  - KEGG
