@@ -173,7 +173,7 @@ NCBI_database_down.py
 ## The type of information that can be accessed.
 
 {% highlight bash %}
-python ./kegg_info_inte_one_upgrade.py -h
+python ./NCBI_database_down.py -h
 {% endhighlight %}
 
 <div style="text-align: center;">
@@ -189,7 +189,7 @@ python ./kegg_info_inte_one_upgrade.py -h
 #### Download protein databases of blast.
 
 {% highlight bash %}
-python ./kegg_info_inte_one_upgrade.py --blast_db nr -o nr_blast_db
+python ./NCBI_database_down.py --blast_db nr -o nr_blast_db
 {% endhighlight %}
 
 <div style="text-align: center;">
@@ -198,7 +198,7 @@ python ./kegg_info_inte_one_upgrade.py --blast_db nr -o nr_blast_db
 
 #### Download nucleic acid databases of sequences.
 {% highlight bash %}
-python ./kegg_info_inte_one_upgrade.py --fasta nt_fasta -o nt_db
+python ./NCBI_database_down.py --fasta nt_fasta -o nt_db
 {% endhighlight %}
 
 > Email me with more questions!
