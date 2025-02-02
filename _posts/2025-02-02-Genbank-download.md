@@ -186,13 +186,17 @@ python ./kegg_info_inte_one_upgrade.py -h
 
 ## Results
 
-#### Download nucleic acid databases of blast.
+#### Download protein databases of blast.
 
 {% highlight bash %}
-python ./kegg_info_inte_one_upgrade.py --blast_db nt -o nt_blast_db
+python ./kegg_info_inte_one_upgrade.py --blast_db nr -o nr_blast_db
 {% endhighlight %}
 
-#### Download protein databases of sequences.
+<div style="text-align: center;">
+  <img src="https://mengqy2022.github.io/assets/images/2024-10-26-GO-2.png"/>
+</div>
+
+#### Download nucleic acid databases of sequences.
 {% highlight bash %}
 python ./kegg_info_inte_one_upgrade.py --fasta nt_fasta -o nt_db
 {% endhighlight %}
