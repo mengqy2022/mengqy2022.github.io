@@ -29,7 +29,7 @@ These macronuclear genome can then be used for functional gene annotation, phylo
 ## Genome prediction workflow
 
 <div style="text-align: center;">
-  <img src="https://mengqy2022.github.io/assets/images/2025-03-03-ciliate-prediction-1.tif"/>
+  <img src="https://mengqy2022.github.io/assets/images/2025-03-03-ciliate-prediction-1.png"/>
 </div>
 
 ### Transcriptome data processing
@@ -356,7 +356,7 @@ nohup bash /home/ownusername/biosoftware/Script_mqy/EVidenceModeler_auto.bash -g
 Result file format.
 
 <div style="text-align: center;">
-  <img src="https://mengqy2022.github.io/assets/images/2025-03-03-ciliate-prediction-2.tif"/>
+  <img src="https://mengqy2022.github.io/assets/images/2025-03-03-ciliate-prediction-2.png"/>
 </div>
 
 The result file is protein sequence in fasta format. File Prefix is -o parameter. **Euplotes.faa** in this case.
