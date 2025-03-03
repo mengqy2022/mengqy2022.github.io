@@ -334,6 +334,15 @@ echo "   作者: 孟庆瑶"
 echo "   如有疑问请联系: <15877464851@163.com>"
 {% endhighlight %}
 
+{% highlight bash %}
+nohup bash /home/ownusername/biosoftware/Script_mqy/EVidenceModeler_auto.bash -g Euplotes.fna -a ownusername.assemblies.fasta -p ownusername.pasa_assemblies.gff3 -r Relative_species.faa -w weights.txt -o Euplotes &
+
+# weights.txt 
+# TRANSCRIPT	assembler-ownusername	10
+# PROTEIN	miniprot	3
+# OTHER_PREDICTION	Augustus	3
+{% endhighlight %}
+
 > **If you want to use this script, you need to have the following software installed:**
 > - [miniprot][miniprot-doc]
 > - [EVidenceModeler][EVidenceModeler-doc]
@@ -347,7 +356,12 @@ echo "   如有疑问请联系: <15877464851@163.com>"
 
 
 ## Quote
-
+> - [Fastqc][fastqc-doc]
+> - [Fastp][fastp-doc]
+> - [Trinity][trinity-doc]
+> - [PASA][pasa-doc]
+> - [MySQL][mysql-doc]
+> - [Augustus][augustus-doc]
 > - [miniprot][miniprot-doc]
 > - [EVidenceModeler][EVidenceModeler-doc]
 
