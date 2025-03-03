@@ -29,135 +29,304 @@ These macronuclear genome can then be used for functional gene annotation, phylo
 ## Genome prediction workflow
 
 <div style="text-align: center;">
-  <img src="https://mengqy2022.github.io/assets/images/2024-10-25-genome-annotation-1.png"/>
+  <img src="https://mengqy2022.github.io/assets/images/2025-03-03-ciliate-prediction-1.tif"/>
 </div>
 
+### Transcriptome data processing
+
+1. Obtain transcriptome sequencing data.
+2. Quality control and filtering.
+3. Trinity: Assemble transcriptome sequences into contigs.
+
 {% highlight bash %}
-#!/bin/bash/
+# Quality control
+fastqc *.fq.gz -o fastqc -t 10 &
+
+# Filtering
+fastp -i CK-1_1.fq.gz -I CK-1_2.fq.gz -o CK-1_1.fp.fq.gz -O CK-1_2.fp.fq.gz -w 8 &
+fastp -i CK-2_1.fq.gz -I CK-2_2.fq.gz -o CK-2_1.fp.fq.gz -O CK-2_2.fp.fq.gz -w 8 &
+
+# Assemble
+Trinity --samples_file samples_file.txt --CPU 25 --max_memory 50G --seqType fq &
+
+# samples_file.txt
+# CK	CK-1	CK-1_1.fp.fq	CK-1_2.fp.fq
+# CK	CK-2	CK-2_1.fp.fq	CK-2_2.fp.fq
+{% endhighlight %}
+
+<div class="notice">
+  <h4>The cDNA sequence was obtained.</h4>
+</div>
+
+### PASA gene structure annotation.
+
+{% highlight bash %}
+nohup Launch_PASA_pipeline.pl \
+	-c pasa_conf/alignAssembly.config \
+	-C \
+	-R \
+	-r \
+	-g genome.fasta \
+	-t cDNA.fa\
+	--ALIGNERS gmap,blat \
+	--GENETIC_CODE Euplotes \
+	--CPU 10 &
+
+# conf.txt and alignAssembly.config are in the pasa_conf
+
+# conf.txt
+# MYSQL_RW_USER=ownusername
+# MYSQL_RW_PASSWORD=passwd
+# MYSQLSERVER=localhost
+# VECTOR_DB=/data_2/database/UniVec/UniVec
+
+# alignAssembly.config
+# ## templated variables to be replaced exist as <__var_name__>
+# DATABASE=ownusername
+# #######################################################
+# # Parameters to specify to specific scripts in pipeline
+# # create a key = "script_name" + ":" + "parameter" 
+# # assign a value as done above.
+# #script validate_alignments_in_db.dbi
+# validate_alignments_in_db.dbi:--MIN_PERCENT_ALIGNED=80
+# validate_alignments_in_db.dbi:--MIN_AVG_PER_ID=80
+# #script subcluster_builder.dbi
+# subcluster_builder.dbi:-m=50
+{% endhighlight %}
+
+**Augustus training data acquisition.**
+
+<div class="notice">
+  <h4>Augustus supports training for some species, if not you need to train them yourself！</h4>
+</div>
+
+> **You need to have the following software installed:**
+> - [Fastqc][fastqc-doc]
+> - [Fastp][fastp-doc]
+> - [Trinity][trinity-doc]
+> - [PASA][pasa-doc]
+> - [MySQL][mysql-doc]
+
+{% highlight bash %}
+# Get the gbk file.
+nohup /home/ownusername/miniconda3/envs/pasa/opt/pasa-2.5.3/scripts/pasa_asmbls_to_training_set.dbi \
+	--pasa_transcripts_fasta ownusername.assemblies.fasta \
+	--pasa_transcripts_gff3 ownusername.pasa_assemblies.gff3 &
+
+nohup /home/ownusername/miniconda3/envs/augustus/bin/gff2gbSmallDNA.pl \
+	../ownusername.assemblies.fasta.transdecoder.genome.gff3 \
+	../eup_genome.fasta \
+	1000 \
+	pasa_amit.gb &
+
+# Try training to catch mistakes.
+/home/ownusername/miniconda3/envs/augustus/bin/etraining \
+	--species=euplotes_mqy \
+	pasa_amit.gb 2> train.err &
+
+# Filtering out the genetic structure that can be wrong.
+cat train.err | perl -pe 's/.*in sequence (\S+): .*/$1/' >badgenes.lst
+
+/home/ownusername/miniconda3/envs/augustus/bin/filterGenes.pl badgenes.lst pasa_amit.gb > pasa_amit_mod.gb
+
+# Extract the proteins from genes.db after filtering in the previous step.
+grep '/gene' pasa_amit_mod.gb |sort |uniq  |sed 's/\/gene=//g' |sed 's/\"//g' |awk '{print $1}' > pasa_amit_mod.ids
+
+seqkit faidx ../ownusername.assemblies.fasta.transdecoder.pep --infile-list pasa_amit_mod.ids > pasa_amit_mod.pep
+
+# The obtained protein sequences were constructed into libraries and themselves blastp compared.
+cd /data_1/mqy/02_genome/01_Euplotes/module/nr/
+
+makeblastdb -in ../pasa_amit_mod.pep -dbtype prot -parse_seqids -out pasa_amit_mod &
+blastp -db pasa_amit_mod -query ../pasa_amit_mod.pep -out ../pasa_amit_mod.blastp -evalue 1e-5 -outfmt 6 -num_threads 8 &
+
+cd /data_1/mqy/02_genome/01_Euplotes/module/
+# Based on the results of the comparison, only one of the genes will be retained if the intergenic IDENTITY >= 70%.
+nohup python /home/ownusername/Script_bioinformatics/augustus_blastp.py -i pasa_amit_mod.blastp -s ../ownusername.assemblies.fasta.transdecoder.genome.gff3 -r ../ownusername.assemblies.fasta.transdecoder.genome.mod.gff3 &
+
+nohup /home/ownusername/miniconda3/envs/augustus/bin/gff2gbSmallDNA.pl \
+	../ownusername.assemblies.fasta.transdecoder.genome.mod.gff3 \
+	../eup_genome.fasta \
+	1000 \
+	pasa_amit_filter.gb &
+
+# Test set minimum 200
+/home/ownusername/miniconda3/envs/augustus/bin/randomSplit.pl pasa_amit_filter.gb 500
+
+/home/ownusername/miniconda3/envs/augustus/bin/new_species.pl \
+	--species=Euplotes \
+	--AUGUSTUS_CONFIG_PATH=/home/ownusername/miniconda3/envs/augustus/config &
+	
+nohup /home/ownusername/miniconda3/envs/augustus/bin/etraining \
+	--species=Euplotes \
+	pasa_amit_filter.gb.train 2> train_filter.err &
+
+nohup /home/ownusername/miniconda3/envs/augustus/bin/augustus \
+	--translation_table=10 \
+	--species=Euplotes \
+	pasa_amit_filter.gb.test | tee firsttest_tee.out &
+
+nohup /home/ownusername/miniconda3/envs/augustus/bin/augustus \
+	--translation_table=10 \
+	--species=Euplotes \
+	pasa_amit_filter.gb.test >firsttes.augustus &
+{% endhighlight %}
+
+<div class="notice">
+  <h4>Species training models were obtained!</h4><br><br>
+  <h4>However, the quality of the training results needs to be considered in more aspects of the study, and it needs to be adjusted.</h4>
+</div>
+
+> **You need to have the following software installed:**
+> - [Augustus][augustus-doc]
+
+### Processing Scripts
+
+1. Augustus makes de novo predictions of the genome and adds cDNA evidence.
+2. Homology comparison based on protein sequences of closely related species.
+3. Integrate three types of evidence.
+
+{% highlight bash %}
+#!/bin/bash
 # **************************************************
-# 共生菌基因预测以及去除假基因
-# Date   : 2023-09-25
+# 整合各种预测证据
+# Date   : 2024-11-03
 # Author : 孟庆瑶
+# Version: 1.0
 # **************************************************
 
-#  发生错误停止脚本
+# 发生错误停止脚本
 set -e
 
-#  获取脚本名称并输出
+# 获取脚本名称并输出
 name=$(basename $0) 
 echo 
 echo "   脚本名称: $name"
 
-#  设置参数以及处理
-OUTPREFIX="Bacterial_results"
+# 设置参数以及处理
+OUTPREFIX="Euplotes"
+CODE="TAA,TAG"
+SPE="euplotes"
+TAB="10"
+NUM_THREADS=5  # 默认支持5个线程
 
-while getopts hi:g:o: opt
-do
+# 设置封装
+while getopts "hg:p:a:r:w:s:c:t:o:n:" opt; do
     case "$opt" in 
     h)
         echo
-        echo "脚本说明: 基因预测、假基因预测和获得去除假基因的CDs序列，(*￣︶￣)，东西不多，一字一字看！"
+        echo -e "   脚本说明: [真核生物基因预测，将多个预测结果整合] \n\n             [不运行PASA，自动生成augustus和miniprot预测证据。]"
+        echo -e "使用说明: bash $name -g genome.fasta -a assemblies.fasta -p PASA_result.gff3 -c TAA,TAG -r related_species.faa \n                                         -w weights.txt -s euplotes -t 10 -o out_prefix -n 5"
+        echo -e "\t-g: 输入预测物种基因组 [.fasta]"
+        echo -e "\t-p: PASA整合的结果 [.gff3]"
+        echo -e "\t-a: PASA整合的结果 [.fasta]"
+        echo -e "\t-r: 近缘物种蛋白序列 [.faa]"
+        echo -e "\t-w: 权重文件 [.txt]"
+        echo -e "\t-s: 物种 默认:[euplotes]"
+        echo -e "\t-c: 终止密码子类型 默认:[TAA,TAG]"
+        echo -e "\t-t: 翻译密码表 默认:[10]"
+        echo -e "\t-o: 输出文件名称 默认:[Euplotes]"
+        echo -e "\t-n: 并行计算线程数 默认:[5]"
+        echo -e "\t-v: 显示版本信息；"
         echo
-        echo "使用说明: bash $name -i genome_file_name -g genome_fasta -o out_prefix"
-        echo "------------------------------------------------------------------------------------"
-        echo -e "\t-i: 输入文本文件、包含基因文件名称、不带后缀、单列文件，一列为一个基因组；"
-        echo -e "\t-g: 基因文件夹名称，文件夹中可以包含一个或者多个基因组；"
-        echo -e "\t-o: 文件前缀, 默认:去除假基因序列；"
         echo "`date '+Date: %D %T'`"
-        echo -e "\n             >>>> mqy <<<< \n "
-        echo "     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-        echo "     !!!!   保证所有文件都在一个工作目录下   !!!!"
-        echo "     !!!!          -g:为文件夹名称           !!!!"
-        echo "     !!!!    -i内容和-g中的文件名称要相同    !!!!"
-        echo "     !!!!-g文件夹种存放的物种核苷酸基因组文件!!!!"
-        echo "     !!!!，文件名称与-i文件中相同。          !!!!"
-        echo "     !!!! 输出结果中包含:                    !!!!"
-        echo "     !!!!               基因预测文件;        !!!!"
-        echo "     !!!!               假基因预测文件;      !!!!"
-        echo "     !!!!               去除假基因序列文件。 !!!!"
-        echo "     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-        echo
         exit 0
         ;;
-    i) 
-        echo "输入-i文件为: $OPTARG"
-        FILENAME=$OPTARG
-        ;;
-    g) 
-        echo "输入-g文件为: $OPTARG"
-        FOLDERNAME=$OPTARG
-        ;;
-    o) 
-        echo "设置输出文件名前缀为: $OPTARG"
-        OUTPREFIX=$OPTARG
-        ;;
-    *) 
-        echo "未知参数: $opt"
-        ;;
+    a) PAS=$OPTARG ;;
+    g) GEN=$OPTARG ;;
+    p) PASA=$OPTARG ;;
+    r) PROT=$OPTARG ;;
+    w) WEI=$OPTARG ;;
+    s) SPE=$OPTARG ;;
+    c) CODE=$OPTARG ;;
+    t) TAB=$OPTARG ;;
+    o) OUTPREFIX=$OPTARG ;;
+    n) NUM_THREADS=$OPTARG ;;
+    v) echo -e "\n版本信息: v1.0\n"; exit 0 ;;
+    *) echo "未知参数: $opt"; exit 1 ;;
     esac
 done
 
-#####################-z 判断字符串是否为0
+# 检查必要参数
+check_required_param() {
+    if [ -z "$1" ]; then
+        echo -e "       [请输入-h，查看帮助文档！]       "
+        echo -e "[除了具有默认的参数，其余参数都必需设置]"
+        echo
+        exit 1
+    fi
+}
 
-if [ -z $FILENAME ]
-then
-    echo -e "\n请输入-h，查看帮助文档！"
-    exit 1
-fi
+check_required_param "$PROT"
+check_required_param "$GEN"
+check_required_param "$PASA"
+check_required_param "$PAS"
+check_required_param "$WEI"
 
-############设置单个物种文件夹
-for i in `cat ./$FILENAME` ;do mkdir ./$FOLDERNAME/${i}  &&  mv ./$FOLDERNAME/${i}.* ./$FOLDERNAME/${i} ;done
+# 获取当前路径
+path=$(pwd)
 
-############Prokka
-source /home/mengqingyao/miniconda3/bin/activate prokka
+# 创建miniprot目录并运行miniprot
+echo -e "\n [运行miniprot] \n"
+miniprot_dir="$path/miniprot"
+mkdir -p "$miniprot_dir"
 
-if [ -d "prokka" ]; then
-    rm -rf prokka
-fi
+miniprot -t "$NUM_THREADS" --gff "$GEN" "$PROT" > "$miniprot_dir/miniprot_$OUTPREFIX.gff"
+grep -v "#" "$miniprot_dir/miniprot_$OUTPREFIX.gff" > "$miniprot_dir/miniprot_${OUTPREFIX}_mod.gff"
+python /data_2/biosoftware/EVidenceModeler-v2.1.0/EvmUtils/misc/miniprot_GFF_2_EVM_GFF3.py \
+    "$miniprot_dir/miniprot_${OUTPREFIX}_mod.gff" > "$miniprot_dir/miniprot_${OUTPREFIX}_mod_evm.gff3"
 
-mkdir prokka && cd prokka
+echo -e "\n [蛋白证据准备完成] \n"
 
-for i in `cat ../$FILENAME`; do prokka \
- ../$FOLDERNAME/${i}/${i}.* --cpus 0 --force --outdir ${i}_prokka --prefix ${i} --addmrna --compliant 200; done 
+# 创建augustus目录并运行Augusuts
+echo -e "\n [运行Augusuts] \n"
+augustus_dir="$path/augusuts"
+mkdir -p "$augustus_dir"
 
-############pseudofinder
+blat -noHead "$GEN" "$PAS" "$augustus_dir/Augustus_est.psl"
 
-conda activate pseudofinder
+/data_2/biosoftware/Augustus/scripts/filterPSL.pl --best "$augustus_dir/Augustus_est.psl" > "$augustus_dir/Augustus_est.f.psl"
+/data_2/biosoftware/Augustus/scripts/blat2hints.pl --nomult --in="$augustus_dir/Augustus_est.f.psl" --out="$augustus_dir/Augustus_hints.est.gff"
 
-if [ -d "../pseudogene" ]; then
-    rm -rf ../pseudogene
-fi
+augustus --gff3=on --species="$SPE" --protein=on --codingseq=on \
+    --outfile="$augustus_dir/augustus_${OUTPREFIX}_mod.gff3" "$GEN" --translation_table="$TAB" --hintsfile="$augustus_dir/Augustus_hints.est.gff" \
+    --extrinsicCfgFile=/home/ownusername/miniconda3/envs/augustus/config/extrinsic/extrinsic.M.RM.E.W.cfg
 
-mkdir ../pseudogene && cd ../pseudogene
+awk '$3=="gene" || $3=="CDS" || $3=="transcript" {print}' "$augustus_dir/augustus_${OUTPREFIX}_mod.gff3" > "$augustus_dir/augustus_${OUTPREFIX}_mod_evm.gff3"
 
-for i in `cat ../$FILENAME` ; do /home/mengqingyao/biosoftware/pseudofinder-master/pseudofinder.py \
-annotate --genome ../prokka/${i}_prokka/${i}.gb* --outprefix ${i} \
--di --database /data/mengqy/database/diamond_nr/diamond_makedb.dmnd --threads 16 -e 1e-15 ;done
+echo -e "\n [从头预测结束] \n"
 
-#############获得去除假基因的序
+# 创建EVidenceModeler目录并运行EVidenceModeler
+echo -e "\n [运行EVidenceModeler] \n"
+evidence_modeler_dir="$path/EVidenceModeler"
+mkdir -p "$evidence_modeler_dir" && cd "$evidence_modeler_dir"
 
-if [ -d "../remove_pseudogene" ]; then
-    rm -rf ../remove_pseudogene
-fi
+source /home/ownusername/miniconda3/bin/activate evidencemodeler
 
-mkdir ../remove_pseudogene && cd ../remove_pseudogene
+EVidenceModeler --sample_id "$OUTPREFIX" \
+    --genome "$path/$GEN" \
+    --weights "$path/$WEI" \
+    --gene_predictions "$augustus_dir/augustus_${OUTPREFIX}_mod_evm.gff3" \
+    --transcript_alignments "$path/$PASA" \
+    --protein_alignments "$miniprot_dir/miniprot_${OUTPREFIX}_mod_evm.gff3" \
+    --segmentSize 100000 \
+    --overlapSize 10000 \
+    --stop_codons "$CODE" \
+    --min_intron_length 15 \
+    --CPU "$NUM_THREADS"
 
-for i in `cat ../$FILENAME` ; do cat ../prokka/${i}_prokka/${i}.ffn | grep ">" | cut -c 2- | cut -d " " -f 1 > ${i}_cds.ids && \
- awk '{if(match($0,"old_locus_tag=")) {print substr($0,RSTART+RLENGTH) }}' ../pseudogene/${i}_pseudos.gff \
- | sed 's/,/\t/g' | awk '{print $1}' | sed '/^$/d' >> ${i}_pseudofene.ids && comm -23 <(sort ${i}_cds.ids) <(sort ${i}_pseudofene.ids) > ${i}_remove.ids && \
- python3 /home/mengqingyao/Script_mqy/get_ids_fasta.py ../prokka/${i}_prokka/${i}.faa ${i}_remove.ids ${i}_remove_ids.faa && \
- python3 /home/mengqingyao/Script_mqy/get_ids_fasta.py ../prokka/${i}_prokka/${i}.ffn ${i}_remove.ids ${i}_remove_ids.ffn;done
+cd ../
+echo -e "\n [整合结束] \n"
 
-if [ -d "../$OUTPREFIX" ]; then
-    rm -rf ../$OUTPREFIX
-fi
+# 获取蛋白序列
+echo -e "\n [获得蛋白序列中......] \n"
 
-mkdir ../$OUTPREFIX 
+gffread "$evidence_modeler_dir/$OUTPREFIX.EVM.gff3" -g "$GEN" -y "$evidence_modeler_dir/$OUTPREFIX.EVM.gff3.faa"
 
-for i in `cat ../$FILENAME` ; do mv ${i}_remove_ids.faa ../$OUTPREFIX && mv ${i}_remove_ids.ffn ../$OUTPREFIX; done
+python /home/ownusername/Script_bioinformatics/stop_codon_replace.py "$evidence_modeler_dir/$OUTPREFIX.EVM.gff3.faa" > "$OUTPREFIX.faa"
 
-#  运行结束
 echo "   运行结束！"
+echo "   输出结果文件为: $OUTPREFIX.faa"
 echo "   感谢使用本脚本！"
 echo "   版本信息: v1.0"
 echo "   日期: `date '+%Y-%m-%d %H:%M:%S'`"
@@ -166,76 +335,19 @@ echo "   如有疑问请联系: <15877464851@163.com>"
 {% endhighlight %}
 
 > **If you want to use this script, you need to have the following software installed:**
-> - [Prokka][prokka-doc]
-> - [Pseudofinder][pseudofinder-doc]
+> - [miniprot][miniprot-doc]
+> - [EVidenceModeler][EVidenceModeler-doc]
 
 <div class="notice">
-  <h4>Since the software is installed in a different way and in a different location, we need to make changes.</h4>
+  <h4>Replace the absolute path of all of the above software with the absolute path where your file is located.</h4>
 </div>
-
-**A python script in the process. get_ids_fasta.py**
-
-{% highlight python %}
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-import sys
-
-script_name = sys.argv[0]
-
-def usage():
-    print('Usage: python {} [fasta_file] [namelist_file] [outfile_name]'.format(script_name))
-
-
-def main():
-    outf = open(sys.argv[3], 'w')
-    dict = {}
-    with open(sys.argv[1], 'r') as fastaf:
-        for line in fastaf:
-            if line.startswith('>'):
-                name = line
-                dict[name] = ''
-            else:
-                dict[name] += line.replace('\n', '')  # 读取整个fasta文件构成字典
-
-    with open(sys.argv[2], 'r') as listf:
-        for row in listf:
-            row = row.strip()
-            for key in dict.keys():  # 选取包含所需名称的基因名和序列
-                if row in key:
-                    outf.write(key)
-                    outf.write(dict[key] + '\n')
-    outf.close()
-
-
-try:
-    main()
-except IndexError:
-    usage()
-{% endhighlight %}
-
-**The script is used to extract the sequences of the specified gene names from the fasta file.**
-
-## Running the workflow
-
-{% highlight bash %}
-nohup bash /home/mengqy/ws/No_pseudogene_faa.sh -i head.txt -g Genome/ & 
-{% endhighlight %}
-
-**Wait for the completion of the job.**
 
 ## Result
 
-<div style="text-align: center; margin-bottom: 20px;">
-  <img src="https://mengqy2022.github.io/assets/images/2024-10-25-genome-annotation-3.png"/>
-</div>
-
-We won't explain the results of the different software in detail here, but if you're interested, you can visit [Prokka][prokka-doc] and [Pseudofinder][pseudofinder-doc] to find out.
-
 ## Quote
 
-> - [Prokka][prokka-doc]
-> - [Pseudofinder][pseudofinder-doc]
+> - [miniprot][miniprot-doc]
+> - [EVidenceModeler][EVidenceModeler-doc]
 
 > Email me with more questions!
 > 584338215@qq.com
