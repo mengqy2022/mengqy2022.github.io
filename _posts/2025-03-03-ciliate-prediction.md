@@ -1,9 +1,9 @@
 ---
-title: "Bacterial gene prediction as well as pseudogene prediction!"
+title: "Gene prediction in eukaryotes is exemplified by ciliates!"
 categories: 
  - Genomics
 tags: 
- - Bacteria
+ - Eukaryotes
  - bash
  - python
 ---
