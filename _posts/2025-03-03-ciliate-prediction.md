@@ -94,18 +94,18 @@ nohup Launch_PASA_pipeline.pl \
 # subcluster_builder.dbi:-m=50
 {% endhighlight %}
 
-**Augustus training data acquisition.**
-
-<div class="notice">
-  <h4>Augustus supports training for some species, if not you need to train them yourself！</h4>
-</div>
-
 > **You need to have the following software installed:**
 > - [Fastqc][fastqc-doc]
 > - [Fastp][fastp-doc]
 > - [Trinity][trinity-doc]
 > - [PASA][pasa-doc]
 > - [MySQL][mysql-doc]
+
+**Augustus training data acquisition.**
+
+<div class="notice">
+  <h4>Augustus supports training for some species, if not you need to train them yourself！</h4>
+</div>
 
 {% highlight bash %}
 # Get the gbk file.
@@ -343,6 +343,8 @@ echo "   如有疑问请联系: <15877464851@163.com>"
 </div>
 
 ## Result
+
+
 
 ## Quote
 
