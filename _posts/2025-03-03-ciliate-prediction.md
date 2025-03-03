@@ -353,7 +353,13 @@ nohup bash /home/ownusername/biosoftware/Script_mqy/EVidenceModeler_auto.bash -g
 
 ## Result
 
+Result file format.
 
+<div style="text-align: center;">
+  <img src="https://mengqy2022.github.io/assets/images/2025-03-03-ciliate-prediction-2.tif"/>
+</div>
+
+The result file is protein sequence in fasta format. File Prefix is -o parameter. **Euplotes.faa** in this case.
 
 ## Quote
 > - [Fastqc][fastqc-doc]
@@ -368,8 +374,14 @@ nohup bash /home/ownusername/biosoftware/Script_mqy/EVidenceModeler_auto.bash -g
 > Email me with more questions!
 > 584338215@qq.com
 
-[prokka-doc]: https://github.com/tseemann/prokka
-[pseudofinder-doc]: https://help.rc.ufl.edu/doc/Pseudofinder
+[fastqc-doc]: http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
+[fastp-doc]: https://github.com/OpenGene/fastp
+[trinity-doc]: https://github.com/trinityrnaseq/trinityrnaseq
+[pasa-doc]: https://github.com/PASApipeline/PASApipeline/
+[mysql-doc]: https://www.mysql.com/
+[augustus-doc]: https://github.com/Gaius-Augustus/Augustus
+[miniprot-doc]: https://github.com/lh3/miniprot
+[EVidenceModeler-doc]: https://github.com/evidencemodeler/evidencemodeler
 
 <script src="https://giscus.app/client.js"
         data-repo="mengqy2022/mengqy2022.github.io"
