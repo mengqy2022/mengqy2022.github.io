@@ -1,5 +1,5 @@
 ---
-title: "Gene prediction in eukaryotes is exemplified by ciliates!"
+title: "Gene prediction in eukaryotes is exemplified by Euplotes!"
 categories: 
  - Genomics
 tags: 
@@ -10,32 +10,27 @@ tags:
 
 # Introduction
 
-Now, we will genome annotate the bacterial genome, obtain protein coding sequences.
+Now, we will genome annotate the eukaryotes genome, obtain protein coding sequences.
 
-These data can then be used for functional gene annotation, phylogenetic analysis, etc.
+Gene prediction in eukaryotes is more complex, take the Euplotes as an example:
+1. Through high-throughput sequencing, quality control, filtering, and splicing, a mixed genome was obtained, including the macronuclear genome of Euplotes, the mitochondrial genome, and the genome of a variety of symbionts.
+2. It is necessary to remove the mitochondrial genome and the genome of a variety of commensal bacteria to obtain a macronuclear genome.
+3. The eukaryotic genome also has a large number of repetitive sequences that should be identified and removed. However, the genome of the Euplotes is highly fragmented, and only one gene is usually present on a fragment, so the repetitive sequence is not processed.
+
+These macronuclear genome can then be used for functional gene annotation, phylogenetic analysis, etc.
 
 ## Data preparation
 
 ### Obtain the Genome Sequence
 
-- First, we can download the bacterial genome sequence from NCBI or other sources.
-- Secondly, through high-throughput sequencing data (HTS) technology, we can obtain the sequence of the bacterial genome.
+- First, we can download the macronuclear genome sequence from NCBI or other sources.
+- Secondly, through high-throughput sequencing data (HTS) technology, we can obtain the sequence of the macronuclear genome.
+
+## Genome prediction workflow
 
 <div style="text-align: center;">
   <img src="https://mengqy2022.github.io/assets/images/2024-10-25-genome-annotation-1.png"/>
 </div>
-
-### Preparing genome name files
-
-{% highlight bash %}
-ls Genome/ | cut -d '.' -f 1 > head.txt
-{% endhighlight %}
-
-<div style="text-align: center;">
-  <img src="https://mengqy2022.github.io/assets/images/2024-10-25-genome-annotation-2.png"/>
-</div>
-
-## Genome Annotation workflow
 
 {% highlight bash %}
 #!/bin/bash/

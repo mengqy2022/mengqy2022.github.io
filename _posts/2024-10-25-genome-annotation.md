@@ -35,7 +35,7 @@ ls Genome/ | cut -d '.' -f 1 > head.txt
   <img src="https://mengqy2022.github.io/assets/images/2024-10-25-genome-annotation-2.png"/>
 </div>
 
-## Genome Annotation workflow
+## Genome prediction workflow
 
 {% highlight bash %}
 #!/bin/bash/
