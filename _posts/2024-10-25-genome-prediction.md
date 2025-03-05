@@ -22,7 +22,7 @@ These data can then be used for functional gene annotation, phylogenetic analysi
 - Secondly, through high-throughput sequencing data (HTS) technology, we can obtain the sequence of the bacterial genome.
 
 <div style="text-align: center;">
-  <img src="https://mengqy2022.github.io/assets/images/2024-10-25-genome-annotation-1.png"/>
+  <img src="https://mengqy2022.github.io/assets/images/2024-10-25-genome-prediction-1.png"/>
 </div>
 
 ### Preparing genome name files
@@ -32,7 +32,7 @@ ls Genome/ | cut -d '.' -f 1 > head.txt
 {% endhighlight %}
 
 <div style="text-align: center;">
-  <img src="https://mengqy2022.github.io/assets/images/2024-10-25-genome-annotation-2.png"/>
+  <img src="https://mengqy2022.github.io/assets/images/2024-10-25-genome-prediction-2.png"/>
 </div>
 
 ## Genome prediction workflow
@@ -64,6 +64,7 @@ do
         echo "脚本说明: 基因预测、假基因预测和获得去除假基因的CDs序列，(*￣︶￣)，东西不多，一字一字看！"
         echo
         echo "使用说明: bash $name -i genome_file_name -g genome_fasta -o out_prefix"
+        echo -e "详细使用：https://mengqy2022.github.io/genomics/genome-prediction/"
         echo "------------------------------------------------------------------------------------"
         echo -e "\t-i: 输入文本文件、包含基因文件名称、不带后缀、单列文件，一列为一个基因组；"
         echo -e "\t-g: 基因文件夹名称，文件夹中可以包含一个或者多个基因组；"
@@ -232,7 +233,7 @@ nohup bash /home/mengqy/ws/No_pseudogene_faa.sh -i head.txt -g Genome/ &
 ## Result
 
 <div style="text-align: center; margin-bottom: 20px;">
-  <img src="https://mengqy2022.github.io/assets/images/2024-10-25-genome-annotation-3.png"/>
+  <img src="https://mengqy2022.github.io/assets/images/2024-10-25-genome-prediction-3.png"/>
 </div>
 
 We won't explain the results of the different software in detail here, but if you're interested, you can visit [Prokka][prokka-doc] and [Pseudofinder][pseudofinder-doc] to find out.

@@ -243,7 +243,7 @@ if __name__ == "__main__":
     print_colored(f"                           当前日期: {current_date}", 'green')
 
     parser = argparse.ArgumentParser(description=print_colored('\t\t                  [感谢使用本脚本]\n','green'),
-                                     epilog=print_colored('\t更详细的信息请访问: https://mengqy2022.github.io/gene%20annotation/kegg-infomation/\n','green'))
+                                     epilog=print_colored('\t更详细的信息请访问: https://mengqy2022.github.io/gene%20annotation/database/kegg-infomation/\n','green'))
     parser.add_argument('-o', '--output', required=True, help='指定输出文件的名称')
     parser.add_argument('--modules', action='store_true', help='获取模块信息')
     parser.add_argument('--pathways', action='store_true', help='获取通路信息')
